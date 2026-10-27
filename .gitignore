@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+.ruff_cache/
+
+# State (live data, not source)
+state.json
+tracked.json
+prefs.json
+interest-profile.json
+learned-weights.json
+feed-sites.json
+weekly.json
+reports.json
+classifications.json
+Reader_Feeds*.opml
+!tests/fixtures/Reader_Feeds.opml
+run.lock
+run.status
+
+# Logs
+*.log
+
+# Compiled passthrough launchers (rebuild with ./build-launchers.sh)
+/bin/
+
+# Written by ./install.sh from launchd/*.template, for this machine
+/com.readwisenewsdigest.*.plist
+.venv/
+
+# macOS
+.DS_Store
+
+# Claude Code
+.claude/

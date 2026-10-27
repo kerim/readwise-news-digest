@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.readwisenewsdigest.run</string>
+    <!-- ProgramArguments[0] is the compiled launcher, so Login Items &
+         Extensions (BTM) names this job "readwise-news-digest-run" instead of
+         "caffeinate" or "python3". It exec()s the rest unchanged. Build it with
+         ./build-launchers.sh; reload with ./reload-launchers.sh. See docs/DEVELOPMENT.md.
+         caffeinate -i keeps the Mac from idle-sleeping mid-run. -->
+    <key>ProgramArguments</key>
+    <array>
+        <string>@PROJECT_DIR@/bin/readwise-news-digest-run</string>
+        <string>/usr/bin/caffeinate</string>
+        <string>-i</string>
+        <string>@PYTHON@</string>
+        <string>@PROJECT_DIR@/run.py</string>
+    </array>
+    <key>WorkingDirectory</key>
+    <string>@PROJECT_DIR@</string>
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+    </dict>
+    <!-- Every hour at :07. If the Mac was asleep, launchd runs it once when it
+         wakes; RunAtLoad covers a fresh login. The first run of each day at or
+         after 05:00 does the day's tagging. -->
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Minute</key>
+        <integer>7</integer>
+    </dict>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>StandardOutPath</key>
+    <string>@PROJECT_DIR@/readwise-news-digest-run.log</string>
+    <key>StandardErrorPath</key>
+    <string>@PROJECT_DIR@/readwise-news-digest-run.log</string>
+</dict>
+</plist>

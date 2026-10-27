@@ -1,0 +1,22 @@
+target-version = "py310"
+line-length = 88
+
+[lint]
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes
+    "I",    # isort
+    "UP",   # pyupgrade
+    "B",    # flake8-bugbear
+    "SIM",  # flake8-simplify
+    "C4",   # flake8-comprehensions
+]
+
+# The scoring prompt in scoring.py has long string lines that can't be split
+# without changing the prompt.
+ignore = ["E501"]
+
+[lint.isort]
+known-first-party = ["common", "reader_api", "feeds_membership", "scoring",
+                     "selection", "run"]

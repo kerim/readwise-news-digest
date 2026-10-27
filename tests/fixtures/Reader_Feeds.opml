@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<opml version="1.0">
+<head>
+  <title>My feeds</title>
+</head>
+<body>
+<outline text="Feeds" title="Feeds">
+  <outline title="The Example Review" category="Longform,News Digest feeds" type="rss" xmlUrl="https://review.example.org/feed" />
+  <outline title="Daily Sample" category="News Digest feeds" type="rss" xmlUrl="https://feeds.dailysample.example/rss.xml" />
+  <outline title="Politics Weekly" category="Politics,News Digest feeds" type="rss" xmlUrl="http://politicsweekly.example/feed/" />
+  <outline title="Tech Notes" category="Favorites,Tech,News Digest feeds" type="rss" xmlUrl="https://technotes.example/feed" />
+  <outline title="Field Reports" category="Longform,News Digest feeds" type="rss" xmlUrl="http://feeds.feedburner.com/fieldreports" />
+  <outline title="Sample Wire: World" category="News Digest feeds" type="rss" xmlUrl="https://wire.sample.example/world.xml" />
+  <outline title="Science Today" category="Science" type="rss" xmlUrl="https://sciencetoday.example/feed/" />
+  <outline title="The Weekly Inquiry" category="Politics" type="rss" xmlUrl="https://weeklyinquiry.example/feed/" />
+  <outline title="A Friend's Blog" category="Friends" type="rss" xmlUrl="https://friend.example/blog/feed/" />
+  <outline title="Misc Links" category="Misc. Feeds" type="rss" xmlUrl="https://misc.example/index.rdf" />
+</outline>
+</body>
+</opml>

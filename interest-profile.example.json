@@ -1,0 +1,13 @@
+{
+  "topics": [
+    {"topic": "Climate policy and the energy transition", "tags": ["climate", "energy"], "score": 1.0},
+    {"topic": "Artificial intelligence and its social effects", "tags": ["ai", "technology"], "score": 0.9},
+    {"topic": "Elections and democratic institutions", "tags": ["politics", "democracy"], "score": 0.8},
+    {"topic": "Labor, wages and the economy", "tags": ["economy", "labor"], "score": 0.7},
+    {"topic": "Medicine and public health", "tags": ["health", "science"], "score": 0.6},
+    {"topic": "War, diplomacy and international order", "tags": ["foreign policy"], "score": 0.6},
+    {"topic": "Cities, housing and transport", "tags": ["cities"], "score": 0.5},
+    {"topic": "Books, essays and the history of ideas", "tags": ["books", "ideas"], "score": 0.5},
+    {"topic": "Media, journalism and the internet", "tags": ["media"], "score": 0.4}
+  ]
+}

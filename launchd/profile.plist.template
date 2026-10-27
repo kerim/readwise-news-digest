@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.readwisenewsdigest.profile</string>
+    <!-- Same launcher trick as the run job: BTM names this
+         "readwise-news-digest-profile". See docs/DEVELOPMENT.md. -->
+    <key>ProgramArguments</key>
+    <array>
+        <string>@PROJECT_DIR@/bin/readwise-news-digest-profile</string>
+        <string>/usr/bin/caffeinate</string>
+        <string>-i</string>
+        <string>@PYTHON@</string>
+        <string>@PROJECT_DIR@/profile_builder.py</string>
+    </array>
+    <key>WorkingDirectory</key>
+    <string>@PROJECT_DIR@</string>
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+    </dict>
+    <!-- Every day at 03:00; the script decides what is due: the profile (if you
+         use a highlights vault) once a week, the monthly report on the first run
+         of a month, the annual one in January. A failure is retried the next day.
+         If the Mac is asleep at 03:00, launchd runs it when it wakes. -->
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Hour</key>
+        <integer>3</integer>
+        <key>Minute</key>
+        <integer>0</integer>
+    </dict>
+    <key>StandardOutPath</key>
+    <string>@PROJECT_DIR@/readwise-news-digest-profile.log</string>
+    <key>StandardErrorPath</key>
+    <string>@PROJECT_DIR@/readwise-news-digest-profile.log</string>
+</dict>
+</plist>
