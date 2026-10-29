@@ -79,7 +79,10 @@ def decayed_total(tracked, today):
                if any(entry.get(field) for field in DIMENSIONS.values()))
 
 
-def compute_learned_weights(tracked, today, now=None):
+def compute_learned_weights(tracked, today, now=None, outside_likes=()):
+    """Nudges from the grades, plus the direct 👍 boosts. `outside_likes` are
+    👍 articles that are not picks (tracking.record_outside_likes): only their
+    site is known, so only the site is boosted."""
     now = now or datetime.now(timezone.utc)
     weights = _empty(now)
     counted = counted_items(tracked, today)
@@ -106,6 +109,11 @@ def compute_learned_weights(tracked, today, now=None):
                 if entry.get(field):
                     boosts[dim][entry[field]] += (
                         THUMBS_UP_BOOST * 0.5 ** (age / HALF_LIFE_DAYS))
+    for like in outside_likes:
+        age = days_between(like["liked_date"], today)
+        if like.get("host") and age <= MAX_AGE_DAYS:
+            boosts["sources"][like["host"]] += (
+                THUMBS_UP_BOOST * 0.5 ** (age / HALF_LIFE_DAYS))
 
     for dim in DIMENSIONS:
         total_imp = sum(impressions[dim].values())
@@ -123,9 +131,9 @@ def compute_learned_weights(tracked, today, now=None):
     return weights
 
 
-def update_learned_weights(paths, tracked, today):
+def update_learned_weights(paths, tracked, today, outside_likes=()):
     """Recompute and save the nudges the next tagging run will use."""
-    weights = compute_learned_weights(tracked, today)
+    weights = compute_learned_weights(tracked, today, outside_likes=outside_likes)
     atomic_write(paths.learned_weights, weights)
     return weights
 

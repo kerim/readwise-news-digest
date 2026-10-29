@@ -92,6 +92,10 @@ defaults are neutral.
   Errors notify; anything that can stop without an error (a job, a signal, a
   feed) gets a health check. Both jobs write a line to `run.log` on every run
   (`tagged=...` hourly, `daily ok|problem=...` daily) and read the other's.
+- **👍 articles that are not picks** are listed once a day in the full refresh
+  (`tracking.record_outside_likes`) into `state.json`'s `outside_likes`, rebuilt
+  from each complete listing. Only their site is known, so learning boosts only
+  the site; the scorer's prompt and the weekly profile get their titles.
 - **👍/👎 are votes, not tags of your own** (`grading.VOTE_TAGS`). 👎 counts only
   through its document note, which reaches the scorer's prompt; it never feeds the
   numeric learning. Notes live in each snapshot (`notes`).

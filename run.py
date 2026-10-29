@@ -300,9 +300,11 @@ def score_candidates(deps, paths, state, tracked, candidates, today, reporter,
     if todo:
         profile = scoring.load_profile(paths)
         profile_context = scoring.build_profile_context(profile)
-        feedback = scoring.build_feedback_context(scoring.reader_feedback(tracked))
-        if feedback:
-            profile_context += "\n\n" + feedback
+        for section in (
+                scoring.build_feedback_context(scoring.reader_feedback(tracked)),
+                scoring.build_likes_context(state.get("outside_likes", {}))):
+            if section:
+                profile_context += "\n\n" + section
         topic_names = scoring.profile_topic_names(profile)
         api_key = deps.api_key()
 
@@ -515,7 +517,8 @@ def run_grade_step(deps, paths, state, tracked, reporter):
     linked = tracking.link_copies(tracked, state, today)
     tracking.apply_highlights(tracked, state)
     changed = grading.regrade(tracked, today, daily=refresh_due)
-    learning.update_learned_weights(paths, tracked, today)
+    learning.update_learned_weights(paths, tracked, today,
+                                    state.get("outside_likes", {}).values())
     tracking.prune(state, today)
 
     # Snapshots first, then the cursor: if the script dies in between, the
@@ -555,7 +558,8 @@ def print_grades(paths, state, tracked, reporter, today):
         reporter.say(f"{shown:>4}  {entry['title'][:62]} ({entry['host']}){flags}")
         reporter.say(f"      {entry['grade_reason'] or 'not looked at yet'}")
 
-    weights = learning.compute_learned_weights(tracked, today)
+    weights = learning.compute_learned_weights(
+        tracked, today, outside_likes=state.get("outside_likes", {}).values())
     reporter.say("")
     reporter.say(f"Learning: {weights['counted']} graded items count (30-120 days "
                  f"old, or given a 👍); decayed total {weights['decayed_total']:.1f}.")

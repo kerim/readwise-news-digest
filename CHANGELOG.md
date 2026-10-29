@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.2.0 — 2026-10-29
+
+### Added
+
+- **👍 on any article counts**, not only on picks: a way to point the digest at
+  subjects it doesn't pick yet. Once a day the program looks up every Reader
+  article tagged 👍 that isn't one of its picks. The scoring AI is shown them as
+  interests (so similar articles rank higher even when they fit no profile topic),
+  their sites get a boost, and the weekly profile rebuild sees them first. Each
+  counts for 120 days after the 👍.
+
 ## 1.1.0 — 2026-10-29
 
 ### Added

@@ -12,10 +12,13 @@ ids, so a copy saved together with its highlights (the web highlighter) counts.
 """
 
 import logging
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 
 import copies
 from common import date_minus_days, days_between, local_date, parse_iso
+from feeds_membership import host_of
+from grading import THUMBS_UP
+from reader_api import SAVED_USING
 
 log = logging.getLogger("rnd")
 
@@ -23,6 +26,7 @@ TAG_NAME = "newsdigest"
 COPY_TAG = "newsdigest-copy"
 MEMORY_DAYS = 14        # copy keys and highlight parents are kept this long
 COPY_WINDOW_DAYS = 14   # a tagged item can acquire a copy this long after tagging
+LIKES_DAYS = 120        # a 👍 outside the digest is remembered this long
 
 
 # --- Snapshots ---------------------------------------------------------------
@@ -216,8 +220,11 @@ def daily_refresh(client, tracked, state, today, now, on_page=None):
     highlights = client.list_documents(updated_after=since, category="highlight",
                                        on_page=on_page)
 
+    liked = client.list_documents(tag=THUMBS_UP, on_page=on_page)
+
     record_copies(state, recent, today)
     record_highlights(state, highlights, today)
+    record_outside_likes(state, tracked, liked, today)
     items = {d["id"]: d for d in item_docs}
     copy_by_id = {d["id"]: d for d in copy_docs}
     for entry in tracked.values():
@@ -239,6 +246,41 @@ def daily_refresh(client, tracked, state, today, now, on_page=None):
             elif entry.get("copy_tagged"):
                 entry["copy_gone"] = True  # only a copy we tagged can be "missing"
     state["last_refresh_date"] = today
+
+
+def tag_date(doc, name):
+    """The local date a tag was added to a document, or None."""
+    tags = doc.get("tags") or {}
+    for key, value in (tags.items() if isinstance(tags, dict) else ()):
+        if (value.get("name") or key) == name and value.get("created"):
+            moment = datetime.fromtimestamp(value["created"] / 1000, timezone.utc)
+            return local_date(moment)
+    return None
+
+
+def record_outside_likes(state, tracked, docs, today):
+    """Remember the articles you gave a 👍 that are not picks or their saved
+    copies (those are graded). Their sites get a boost, the scorer is shown
+    them, and the weekly profile sees them: a way to point the digest at a
+    subject it has never picked. Rebuilt from each complete listing, so
+    removing the 👍 removes the article."""
+    ours = set(tracked) | {e["copy_id"] for e in tracked.values() if e.get("copy_id")}
+    likes = {}
+    for doc in docs:
+        if doc["id"] in ours or doc.get("source") == SAVED_USING:
+            continue
+        liked = tag_date(doc, THUMBS_UP) or today
+        if days_between(liked, today) > LIKES_DAYS:
+            continue
+        url = doc.get("source_url") or doc.get("url") or ""
+        likes[doc["id"]] = {
+            "title": doc.get("title") or "Untitled",
+            "host": host_of(url) or "",
+            "summary": " ".join((doc.get("summary") or "").split())[:300],
+            "note": " ".join((doc.get("notes") or "").split()),
+            "liked_date": liked,
+        }
+    state["outside_likes"] = likes
 
 
 def prune(state, today):

@@ -200,6 +200,27 @@ def build_feedback_context(feedback):
     return "\n".join(lines)
 
 
+def build_likes_context(likes, limit=FEEDBACK_LIMIT):
+    """Articles you gave a 👍 outside the digest, newest first, as a prompt
+    section ("" when there are none)."""
+    rows = sorted(likes.values(), key=lambda like: like["liked_date"],
+                  reverse=True)[:limit]
+    if not rows:
+        return ""
+    lines = [
+        "## Articles the Reader Liked Elsewhere\n",
+        f"The reader marked these articles {THUMBS_UP}; they did not come from the "
+        "digest. Treat their subjects as real interests, including subjects that "
+        "match no profile topic: an item on a similar subject or story deserves a "
+        "higher topic_score even if its primary_topic is \"other\".",
+    ]
+    for like in rows:
+        where = f" ({like['host']})" if like.get("host") else ""
+        about = like.get("note") or like.get("summary")
+        lines.append(f"- “{like['title']}”{where}" + (f": {about}" if about else ""))
+    return "\n".join(lines)
+
+
 # --- Prompt ----------------------------------------------------------------
 
 

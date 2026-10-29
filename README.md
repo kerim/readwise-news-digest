@@ -265,6 +265,16 @@ strong signals, and neither counts as "a tag of your own".
   never lowers the site or topic, since your reason is usually about something
   narrower; the article is still graded by what you did with it, as usual.
 
+**👍 on any other article** in Reader (one you saved yourself, a newsletter,
+anything) also counts, as a way to point the digest at subjects it doesn't pick
+yet. The scoring AI is shown the newest 30 of them (title, site, and your note or
+the summary) as interests to rank similar articles higher, even ones that fit no
+topic in your profile; the article's site gets the same boost as a 👍 on a pick;
+and the weekly profile rebuild sees them first, so a subject you keep liking can
+become a topic of its own. They are looked up once a day and count for 120 days
+after you add the 👍. (👎 on other articles does nothing: they were never going to
+be picked.)
+
 A vote or note is picked up at the next day's picks at the latest (the first run of
 each day re-reads every pick).
 
@@ -423,7 +433,8 @@ These are plain constants in the code if you want to change the behaviour.
 | Tracking stops | 90 days after tagging | `grading.py` (`FREEZE_DAYS`) |
 | Learning: items counted / half-life | 30–120 days old (👍: 0–120) / 30 days | `learning.py` |
 | 👍: weight / direct boost per fresh 👍 | 2× / 0.3 per dimension | `learning.py` (`THUMBS_UP_WEIGHT`, `THUMBS_UP_BOOST`) |
-| Noted 👍/👎 shown to the scorer | newest 30 | `scoring.py` (`FEEDBACK_LIMIT`) |
+| Noted 👍/👎 shown to the scorer / 👍 articles from elsewhere shown | newest 30 / newest 30 | `scoring.py` (`FEEDBACK_LIMIT`) |
+| 👍 articles from elsewhere remembered | 120 days after the 👍 | `tracking.py` (`LIKES_DAYS`) |
 | The digest folder in Reader | `News Digest feeds` | `feeds_membership.py` (`DIGEST_FOLDER`) |
 | Suggestions: look-back / saves a site needs / sites per report | 180 days / 3 / 5 | `suggest.py` |
 | Suggestions come every | 55 days (carried by a monthly report) | `suggest.py` |

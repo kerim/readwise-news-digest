@@ -273,10 +273,18 @@ def _recent_with_grade(tracked, today, keep):
     return rows[:SIGNAL_CAP]
 
 
-def recent_interests(tracked, today):
-    """'Title (site)' of items graded 4-5 within the last 60 days, newest first."""
-    return [f"{e['title']} ({e['host']})"
-            for e in _recent_with_grade(tracked, today, lambda g: g >= 4)]
+def recent_interests(tracked, today, outside_likes=None):
+    """'Title (site)' of the articles you gave a 👍 outside the digest within
+    the last 60 days (they can bring in a subject the digest has never picked,
+    so they come first), then items graded 4-5 in that time; newest first."""
+    cutoff = date_minus_days(today, SIGNAL_DAYS)
+    likes = sorted((like for like in (outside_likes or {}).values()
+                    if like["liked_date"] >= cutoff),
+                   key=lambda like: like["liked_date"], reverse=True)
+    rows = [f"{like['title']} ({like['host']})" for like in likes]
+    rows += [f"{e['title']} ({e['host']})"
+             for e in _recent_with_grade(tracked, today, lambda g: g >= 4)]
+    return rows[:SIGNAL_CAP]
 
 
 def less_of_this(tracked, today):
@@ -347,13 +355,13 @@ def synthesize_topics(enriched_topics, api_key, recent=(), less=(),
 
 
 def build_profile(notes, tracked, today, now, api_key, call=call_anthropic,
-                  qmd_query=query_qmd_for_tag, prefix=""):
+                  qmd_query=query_qmd_for_tag, prefix="", outside_likes=None):
     """The whole profile, from notes already scanned and the tracked items."""
     log.info("Building topic profile...")
     enriched_topics = build_topic_profile(notes, now, qmd_query, prefix)
     log.info(f"Found {len(enriched_topics)} topic tags.")
     domain_profile = build_domain_profile(notes, now)
-    recent = recent_interests(tracked, today)
+    recent = recent_interests(tracked, today, outside_likes)
     less = less_of_this(tracked, today)
     log.info(f"Signals from grades: {len(recent)} recent interests, "
              f"{len(less)} 'less of this'.")
@@ -384,8 +392,9 @@ def rebuild_profile(paths, weekly, today, vault_dir, prefix=""):
         raise RuntimeError(f"Only {len(notes)} notes found (minimum "
                            f"{MIN_VAULT_FILES}). Is the vault synced?")
     log.info(f"Scanned {len(notes)} notes.")
+    outside_likes = load_json(paths.state, {}).get("outside_likes", {})
     profile = build_profile(notes, load_json(paths.tracked, {}), today, now,
-                            get_api_key(), prefix=prefix)
+                            get_api_key(), prefix=prefix, outside_likes=outside_likes)
     if not profile["topics"]:
         raise RuntimeError("The profile came out with no topics; keeping the "
                            "old one.")
