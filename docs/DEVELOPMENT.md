@@ -86,8 +86,9 @@ defaults are neutral.
   progress is only previewed. The annual report waits for December's.
 - **Personal choices live in `prefs.json`, never in the code.** The checked-in
   defaults (source tiers, report topics and regions) are deliberately generic.
-- **Every silent failure needs a check in `health.py`.** The old app lost five
-  months of clicks because a failed write was swallowed and nothing noticed.
+- **Every silent failure needs a check in `health.py`.** This program's
+  predecessor lost months of clicks because a failed write was swallowed and
+  nothing noticed.
   Errors notify; anything that can stop without an error (a job, a signal, a
   feed) gets a health check. Both jobs write a line to `run.log` on every run
   (`tagged=...` hourly, `daily ok|problem=...` daily) and read the other's.

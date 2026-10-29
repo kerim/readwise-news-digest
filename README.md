@@ -217,12 +217,23 @@ problems were reported.
 
 **Make the digest view.** In Reader on the web, open
 [Manage views](https://read.readwise.io/views) (or press `Shift+F`), choose *Add
-filtered view*, type `tag:newsdigest`, click *Filter by query*, then *Save view* and
+filtered view*, type the query below, click *Filter by query*, then *Save view* and
 give it a name. Pin it to your sidebar or Home page if you like. On mobile: Search
-tab, the `+` icon, the same query, then Save. That view is your digest. It also
-shows the report notes, which carry the same tag.
+tab, the `+` icon, the same query, then Save. That view is your digest.
 
-**Just read as you normally would.** What you do with a pick is the only feedback:
+```
+tag:newsdigest AND feed:true AND saved__after:"24 hours ago" AND seen:false
+```
+
+It shows today's picks that you haven't opened yet: `feed:true` keeps it to feed
+items, `saved__after:"24 hours ago"` to the latest day's picks, and `seen:false`
+drops each one once you open it. To come back to a pick later, shortlist it or move
+it to Later. The plain query `tag:newsdigest` shows every pick ever made, plus the
+monthly report notes, which this view leaves out because they are saved to Later,
+not your feed.
+
+**Just read as you normally would.** What you do with a pick is the main feedback
+(you can also vote; see below):
 
 | What you did | Grade |
 |---|---|

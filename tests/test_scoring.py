@@ -270,9 +270,9 @@ class FeedbackTests(unittest.TestCase):
 
     def test_the_section_quotes_each_note(self):
         text = scoring.build_feedback_context(
-            [("👎", "How We Can Build", "nplusonemag.com", "Event notice.")])
+            [("👎", "A Night of Readings", "magazine.example", "Event notice.")])
         self.assertIn("The Reader's Own Verdicts", text)
-        self.assertIn("- 👎 “How We Can Build” (nplusonemag.com): Event notice.", text)
+        self.assertIn("- 👎 “A Night of Readings” (magazine.example): Event notice.", text)
 
     def test_no_votes_no_section(self):
         self.assertEqual(scoring.build_feedback_context([]), "")
