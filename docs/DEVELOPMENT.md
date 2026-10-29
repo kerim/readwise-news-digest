@@ -131,8 +131,11 @@ interpreter.** Two separate reasons:
    (`readwise-news-digest-run`, `readwise-news-digest-profile`) and `exec()`s the
    rest unchanged. Never ship a generic name.
 
-**After editing a template (or first install) run `./install.sh` and then
-`./reload-launchers.sh`, not a plain reload.** Background Task Management appears to
+**After editing a template, after `./build-launchers.sh` (which `./install.sh`
+runs), or on first install, run `./reload-launchers.sh`, not a plain reload.** A
+rebuilt launcher has a new code signature, and launchd then refuses to start the
+job (`last exit reason = OS_REASON_CODESIGNING` in `launchctl print`) until it is
+reloaded -- both jobs at once, so the health checks cannot notice. Background Task Management appears to
 key its cached name to the plist file's own identity; editing the file in place and
 reloading (even rebooting) leaves the old name. The script recreates the
 `~/Library/LaunchAgents/` symlink from scratch, then `bootout` + `bootstrap`.
