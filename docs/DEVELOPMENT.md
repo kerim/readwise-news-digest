@@ -135,7 +135,9 @@ interpreter.** Two separate reasons:
 runs), or on first install, run `./reload-launchers.sh`, not a plain reload.** A
 rebuilt launcher has a new code signature, and launchd then refuses to start the
 job (`last exit reason = OS_REASON_CODESIGNING` in `launchctl print`) until it is
-reloaded -- both jobs at once, so the health checks cannot notice. Background Task Management appears to
+reloaded -- both jobs at once, so the health checks cannot notice. `./install.sh`
+does this itself when the jobs are already loaded; run it by hand after
+`./build-launchers.sh` alone. Background Task Management appears to
 key its cached name to the plist file's own identity; editing the file in place and
 reloading (even rebooting) leaves the old name. The script recreates the
 `~/Library/LaunchAgents/` symlink from scratch, then `bootout` + `bootstrap`.

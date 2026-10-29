@@ -32,13 +32,16 @@
 
 ### Fixed
 
+- Running `./install.sh` again after an update left both background jobs unable to
+  start until they were reloaded by hand. It now reloads jobs that are already
+  loaded.
 - A 👎 tag (like any tag of your own) used to grade an article 5, the strongest
   "liked it". Votes are now handled on their own.
 
-After updating, run `./install.sh` again to build the notification app (macOS may
-ask you to allow its notifications), **then `./reload-launchers.sh`**. Rebuilding
-changes the jobs' launcher programs, and macOS refuses to start them until they
-are reloaded.
+After updating, run `./install.sh` again. It builds the notification app (macOS may
+ask you to allow its notifications) and, since your jobs are already loaded,
+reloads them itself: rebuilding changes the jobs' launcher programs, and macOS
+refuses to start them until they are reloaded.
 
 ## 1.0.0 — 2026-10-27
 

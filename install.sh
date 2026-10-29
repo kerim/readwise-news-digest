@@ -4,9 +4,10 @@
 #   2. the two tiny launcher programs the background jobs start through, and the
 #      small app that sends its notifications (macOS asks you to allow them);
 #   3. the two launchd job files, written for wherever you put this folder.
-# It does not load the jobs and it needs no passwords. The README says what to do
-# next (store your keys, export your feeds, describe your interests, check, load).
-# Safe to run again.
+# On a first install it does not load the jobs, and it needs no passwords: the
+# README says what to do next (store your keys, export your feeds, describe your
+# interests, check, load). Run again after an update, it reloads jobs that are
+# already loaded, because rebuilt launchers are refused by launchd until then.
 
 set -eu
 
@@ -56,5 +57,11 @@ for name in ("run", "profile"):
 PYEOF
 
 echo
-echo "Done. Next, follow the README from 'Store your two keys'."
-echo "When everything is ready:  .venv/bin/python check_setup.py   and then   ./reload-launchers.sh"
+if launchctl print "gui/$(id -u)/com.readwisenewsdigest.run" >/dev/null 2>&1 \
+    || launchctl print "gui/$(id -u)/com.readwisenewsdigest.profile" >/dev/null 2>&1; then
+  echo "Reloading the background jobs (the rebuilt launchers need it)"
+  ./reload-launchers.sh
+else
+  echo "Done. Next, follow the README from 'Store your two keys'."
+  echo "When everything is ready:  .venv/bin/python check_setup.py   and then   ./reload-launchers.sh"
+fi
