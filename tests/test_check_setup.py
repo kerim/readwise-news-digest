@@ -94,6 +94,10 @@ class ChecksTests(unittest.TestCase):
         self.paths.profile.write_text(json.dumps({"topics": [{"topic": "A"}]}))
         self.assertTrue(cs.check_profile(self.paths).ok)
 
+    def test_a_missing_notification_app_is_only_a_note(self):
+        self.assertIsNone(cs.check_notifier(Path("/nonexistent/app")).ok)
+        self.assertTrue(cs.check_notifier(Path(__file__)).ok)
+
     def test_jobs_not_loaded_is_only_a_note(self):
         self.assertIsNone(cs.check_jobs(lambda label: False).ok)
         self.assertTrue(cs.check_jobs(lambda label: True).ok)

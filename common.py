@@ -271,9 +271,25 @@ def iso_utc(dt):
 # --- Notifications ---------------------------------------------------------
 
 
-def notify(title, message):
-    """Show a macOS notification. Never raises: a failed notification must not
-    turn a problem report into a second problem."""
+NOTIFIER = (Path(__file__).resolve().parent / "bin" / "Readwise News Digest.app"
+            / "Contents" / "MacOS" / "readwise-news-digest-notify")
+
+
+def notify(title, message, notifier=NOTIFIER):
+    """Show a macOS notification, from the program's own app (see
+    notifier/notifier.m) so it is listed as "Readwise News Digest"; osascript
+    (listed as Script Editor) if that app is missing or not allowed. Never
+    raises: a failed notification must not turn a problem report into a second
+    problem."""
+    if notifier.exists():
+        try:
+            done = subprocess.run([str(notifier), title, message],
+                                  capture_output=True, text=True, timeout=150)
+            if done.returncode == 0:
+                return
+            log.warning(f"Notification app failed: {done.stderr.strip()}")
+        except (OSError, subprocess.SubprocessError) as e:
+            log.warning(f"Notification app failed: {e}")
     script = (f"display notification {json.dumps(message, ensure_ascii=False)} "
               f"with title {json.dumps(title, ensure_ascii=False)}")
     try:

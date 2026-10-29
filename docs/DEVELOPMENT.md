@@ -36,6 +36,7 @@ changing the code.
 | `health.py` | the checks for problems that raise no error (a job that stopped, no picks, frozen grades, empty learning), read from `run.log` |
 | `common.py` | paths, Keychain, dates, Anthropic call, notifications |
 | `launchd/*.plist.template`, `install.sh`, `build-launchers.sh`, `newsdigest-launcher.c` | the background jobs |
+| `notifier/` | the "Readwise News Digest" notification app (Objective-C, built by `build-launchers.sh` into `bin/`); `common.notify` uses it, falling back to osascript |
 
 State is gitignored JSON next to the code: `tracked.json`, `state.json`,
 `feed-sites.json`, `prefs.json` (the user's settings), `learned-weights.json`,
@@ -93,6 +94,13 @@ defaults are neutral.
 - **👍/👎 are votes, not tags of your own** (`grading.VOTE_TAGS`). 👎 counts only
   through its document note, which reaches the scorer's prompt; it never feeds the
   numeric learning. Notes live in each snapshot (`notes`).
+- **Notifications come from our own app, never a temp folder.** osascript's
+  notifications are filed under Script Editor, shared with every script, so
+  their style can't be set for this program alone. `bin/Readwise News Digest.app`
+  (ad-hoc signed, registered with `lsregister`) posts through UserNotifications.
+  macOS refuses that app outright ("Notifications are not allowed for this
+  application", no prompt) when it sits in a temporary folder; from `bin/` it
+  works whether started directly or with `open`.
 - **Branch flow:** work lands on an integration branch after it has been checked by
   hand; the default branch gets a merge only when a feature is complete.
 

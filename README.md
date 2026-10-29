@@ -194,8 +194,11 @@ tail -3 run.log
 (Each run adds a line like `2027-03-02 07:07 tagged=28 scored=311 graded=0
 learned=0.0`.) The jobs also show up as `readwise-news-digest-run` and
 `readwise-news-digest-profile` in System Settings → General → Login Items &
-Extensions. Problems appear as macOS notifications; if you never see any, check
-System Settings → Notifications.
+Extensions. Problems appear as macOS notifications from **Readwise News Digest**
+(a tiny app `./install.sh` builds in `bin/`, so they have a name of their own). By
+default macOS shows them as banners that vanish after a few seconds; to keep them
+on screen until you close them, go to System Settings → Notifications → Readwise
+News Digest and choose **Persistent**. Missed ones stay in Notification Center.
 
 **It tells you when it has quietly stopped working,** not only when something
 fails. The two jobs check on each other through `run.log`, and you get a

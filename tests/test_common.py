@@ -57,3 +57,40 @@ class DateTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class NotifyTests(unittest.TestCase):
+    def setUp(self):
+        self.calls = []
+        self._real_run = common.subprocess.run
+        self.addCleanup(setattr, common.subprocess, "run", self._real_run)
+
+    def fake_run(self, app_rc):
+        def run(args, **kw):
+            self.calls.append(args[0])
+            rc = app_rc if args[0] != "osascript" else 0
+            return common.subprocess.CompletedProcess(args, rc, "", "not allowed")
+        common.subprocess.run = run
+
+    def app(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        path = Path(tmp.name) / "readwise-news-digest-notify"
+        path.write_text("")
+        return path
+
+    def test_uses_the_programs_own_app(self):
+        self.fake_run(0)
+        app = self.app()
+        common.notify("T", "M", notifier=app)
+        self.assertEqual(self.calls, [str(app)])
+
+    def test_falls_back_to_osascript_when_the_app_is_not_allowed(self):
+        self.fake_run(1)
+        common.notify("T", "M", notifier=self.app())
+        self.assertEqual(self.calls[-1], "osascript")
+
+    def test_falls_back_to_osascript_when_the_app_is_missing(self):
+        self.fake_run(0)
+        common.notify("T", "M", notifier=Path("/nonexistent/app"))
+        self.assertEqual(self.calls, ["osascript"])

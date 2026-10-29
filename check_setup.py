@@ -18,6 +18,7 @@ from dataclasses import dataclass
 import feeds_membership
 from common import (
     DOWNLOADS_DIR,
+    NOTIFIER,
     APIAuthError,
     APINetworkError,
     ConfigError,
@@ -132,6 +133,15 @@ def check_jobs(is_loaded=job_is_loaded):
     return Check(True, "Background jobs", "both loaded")
 
 
+def check_notifier(notifier=NOTIFIER):
+    if not notifier.exists():
+        return Check(None, "Notifications", "the Readwise News Digest notification app is "
+                     "not built; run ./build-launchers.sh (until then they come from "
+                     "Script Editor)")
+    return Check(True, "Notifications", "sent as Readwise News Digest; to keep them on "
+                 "screen, set its style to Persistent in System Settings → Notifications")
+
+
 def run_checks(paths, downloads=DOWNLOADS_DIR, **overrides):
     """All the checks, in the order a person would fix them."""
     return [
@@ -140,6 +150,7 @@ def run_checks(paths, downloads=DOWNLOADS_DIR, **overrides):
         check_anthropic(**overrides.get("anthropic", {})),
         check_feeds(paths, downloads), check_profile(paths),
         check_jobs(**overrides.get("jobs", {})),
+        check_notifier(**overrides.get("notifier", {})),
     ]
 
 

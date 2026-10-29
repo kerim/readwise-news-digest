@@ -1,7 +1,8 @@
 #!/bin/bash
 # Gets this folder ready to run, on a Mac:
 #   1. a private Python environment (.venv) holding the one dependency;
-#   2. the two tiny launcher programs the background jobs start through;
+#   2. the two tiny launcher programs the background jobs start through, and the
+#      small app that sends its notifications (macOS asks you to allow them);
 #   3. the two launchd job files, written for wherever you put this folder.
 # It does not load the jobs and it needs no passwords. The README says what to do
 # next (store your keys, export your feeds, describe your interests, check, load).
@@ -31,8 +32,11 @@ echo "1/3  Python environment (.venv)"
 "$PY" -m venv .venv
 .venv/bin/python -m pip install --quiet -r requirements.txt
 
-echo "2/3  Launchers"
+echo "2/3  Launchers and the notification app"
 ./build-launchers.sh
+"bin/Readwise News Digest.app/Contents/MacOS/readwise-news-digest-notify" \
+  "Readwise News Digest" "Notifications work. Problems will appear like this." \
+  || echo "Notifications are off for Readwise News Digest: turn them on in System Settings → Notifications."
 
 echo "3/3  Job files"
 .venv/bin/python - "$PROJECT_DIR" <<'PYEOF'
