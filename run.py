@@ -27,6 +27,7 @@ from pathlib import Path
 import copies
 import feeds_membership
 import grading
+import health
 import learning
 import scoring
 import selection
@@ -299,6 +300,9 @@ def score_candidates(deps, paths, state, tracked, candidates, today, reporter,
     if todo:
         profile = scoring.load_profile(paths)
         profile_context = scoring.build_profile_context(profile)
+        feedback = scoring.build_feedback_context(scoring.reader_feedback(tracked))
+        if feedback:
+            profile_context += "\n\n" + feedback
         topic_names = scoring.profile_topic_names(profile)
         api_key = deps.api_key()
 
@@ -553,9 +557,8 @@ def print_grades(paths, state, tracked, reporter, today):
 
     weights = learning.compute_learned_weights(tracked, today)
     reporter.say("")
-    reporter.say(f"Learning: {weights['counted']} graded items are 30-120 days old "
-                 f"(decayed total {weights['decayed_total']:.1f} of "
-                 f"{learning.GATE:.0f} needed before any nudge).")
+    reporter.say(f"Learning: {weights['counted']} graded items count (30-120 days "
+                 f"old, or given a 👍); decayed total {weights['decayed_total']:.1f}.")
     for dim, value, delta in learning.biggest_nudges(weights):
         reporter.say(f"  nudge {delta:+.2f}  {dim[:-1]}: {value}")
 
@@ -645,6 +648,25 @@ def report_problem(deps, state, exc, reporter, notify_user=True):
     return False
 
 
+def check_health(deps, paths, state, tracked, result, reporter):
+    """Look for the problems no error reports (see health.py). Notifies at most
+    once per problem per day and returns the problem keys."""
+    now = deps.now()
+    today = local_date(now)
+    rows = health.read_log(paths.run_log)
+    rows.append((now.astimezone().replace(tzinfo=None), "hourly",
+                 {"tagged": str(result["tagged"])}))
+    found = health.hourly_checks(rows, rows[-1][0], tracked,
+                                 scoring.load_learned_weights(paths), today)
+    for key, message in found:
+        log.warning(f"{key}: {message}")
+        reporter.say(f"Problem: {message}")
+        if state["notified"].get(key) != today:
+            deps.notify("Readwise News Digest", message)
+            state["notified"][key] = today
+    return [key for key, _ in found]
+
+
 # --- Entry point -------------------------------------------------------------
 
 
@@ -652,7 +674,7 @@ def append_run_log(paths, now, result, problems=()):
     local = now.astimezone()
     line = (f"{local:%Y-%m-%d %H:%M} tagged={result['tagged']} "
             f"scored={result['scored']} graded={result['graded']} "
-            f"learned={result['learned']:.1f}/{learning.GATE:.0f}")
+            f"learned={result['learned']:.1f}")
     if problems:
         line += " problem=" + ",".join(problems)
     with open(paths.run_log, "a") as f:
@@ -700,6 +722,11 @@ def run_once(deps, paths, reporter, dry_run, grades_only=False):
     if grades_only and not problems:
         print_grades(paths, state, tracked, reporter, local_date(deps.now()))
 
+    if not dry_run and not grades_only:
+        try:
+            problems += check_health(deps, paths, state, tracked, result, reporter)
+        except Exception as exc:
+            fail(exc)
     if not dry_run:
         if problems:
             atomic_write(paths.state, state)   # remember what we notified about

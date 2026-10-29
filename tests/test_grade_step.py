@@ -131,7 +131,7 @@ class SignalTests(GradeStepCase):
         self.reader.highlight("doc29")
         self.later()
         self.go()
-        self.assertIn("graded=1 learned=0.0/50", self.run_log()[-1])
+        self.assertIn("graded=1 learned=0.0", self.run_log()[-1])
 
     def test_learned_weights_file_is_written_empty_below_the_gate(self):
         self.later()
@@ -384,7 +384,7 @@ class GradesReportTests(GradeStepCase):
         self.assertIn("you highlighted it", said)
         self.assertIn("not opened yet", said)
         self.assertIn("Learning:", said)
-        self.assertIn("of 50 needed", said)
+        self.assertIn("decayed total 0.0", said)
 
     def test_grades_flag_counts_saved_articles_that_were_never_picked(self):
         self.later()

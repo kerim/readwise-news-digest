@@ -206,6 +206,26 @@ class MainTests(unittest.TestCase):
         self.assertEqual(self.weekly()["last_profile_date"], TODAY)
         self.assertEqual(self.report_calls, 1)
 
+    def test_each_run_leaves_a_daily_line_for_the_hourly_job(self):
+        self.paths.weekly.write_text(json.dumps({"last_profile_date": "2026-11-29"}))
+        pb.main([])
+        self.assertRegex(self.paths.run_log.read_text(), r"\d{2}:\d{2} daily ok\n$")
+
+    def test_a_failed_part_is_named_in_the_daily_line(self):
+        self.paths.weekly.write_text(json.dumps({"last_profile_date": "2026-11-29"}))
+        self.report_error = RuntimeError("no")
+        pb.main([])
+        self.assertIn("daily problem=monthly-report", self.paths.run_log.read_text())
+
+    def test_a_stopped_hourly_job_is_notified(self):
+        self.paths.weekly.write_text(json.dumps({"last_profile_date": "2026-11-29"}))
+        self.paths.run_log.write_text(
+            "2026-11-20 10:07 tagged=0 scored=0 graded=0 learned=0.0\n"
+            "2026-11-28 03:00 daily ok\n")
+        self.assertEqual(pb.main([]), 1)
+        self.assertTrue(any("hourly job has not run" in m for m in self.notices))
+        self.assertIn("daily problem=hourly-stopped", self.paths.run_log.read_text())
+
     def test_a_profile_built_this_week_is_left_alone_but_the_reports_still_run(self):
         self.paths.weekly.write_text(json.dumps({"last_profile_date": "2026-11-29"}))
         self.paths.profile.write_text('{"topics": [{"topic": "kept"}]}')

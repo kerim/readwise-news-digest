@@ -37,12 +37,12 @@ more are picked at random from just below the cut, so it keeps learning about
 things it would otherwise never show you. You open a saved view in Reader that
 shows `tag:newsdigest`, and that is your digest.
 
-**It learns from what you do, not from ratings.** Every hour it looks at what you
-did with the tagged articles: highlighted something, put your own tag on it,
-shortlisted it, read most of it, archived it unopened, or ignored it for a month.
-Each article gets a grade from 1 to 5 from that behaviour. After about five weeks
-of data the grades start nudging future scores up or down for topics, sites, and
-styles of writing. You never have to rate anything.
+**It learns from what you do.** Every hour it looks at what you did with the
+tagged articles: highlighted something, put your own tag on it, shortlisted it,
+read most of it, archived it unopened, or ignored it for a month. Each article gets
+a grade from 1 to 5 from that behaviour, and the grades nudge future scores up or
+down for topics, sites, and styles of writing. You never have to rate anything, but
+you can: tag a pick 👍 or 👎 (see [Voting](#voting-with--and-)).
 
 **It keeps you informed about your own habits.** At the start of each month it
 adds a note to Reader with a report on your reading: which sources you used most,
@@ -192,10 +192,23 @@ tail -3 run.log
 ```
 
 (Each run adds a line like `2027-03-02 07:07 tagged=28 scored=311 graded=0
-learned=0.0/50`.) The jobs also show up as `readwise-news-digest-run` and
+learned=0.0`.) The jobs also show up as `readwise-news-digest-run` and
 `readwise-news-digest-profile` in System Settings → General → Login Items &
 Extensions. Problems appear as macOS notifications; if you never see any, check
 System Settings → Notifications.
+
+**It tells you when it has quietly stopped working,** not only when something
+fails. The two jobs check on each other through `run.log`, and you get a
+notification (at most once a day each) when:
+
+- the hourly job has not run since the daily job last did, or the daily job has not
+  run today although the hourly job has run several times since 03:00;
+- no articles have been picked on two days the Mac was on;
+- no article's grade has changed for 14 days;
+- articles are old enough to learn from but the learning produces nothing.
+
+Each monthly report ends with a line on how many days each job ran and which
+problems were reported.
 
 ## Use it in Reader
 
@@ -210,7 +223,7 @@ shows the report notes, which carry the same tag.
 
 | What you did | Grade |
 |---|---|
-| Highlighted it, or put a tag of your own on it | 5 |
+| Tagged it 👍, highlighted it, or put a tag of your own on it | 5 |
 | Read at least half of a long article (1,500+ words) | 4 |
 | Shortlisted it, or read at least half of a medium article (500–1,499 words) | 3 |
 | Opened a longer article, read less than half, then archived it; or left it in Later unopened for 21 days | 2 |
@@ -221,6 +234,25 @@ shows the report notes, which carry the same tag.
 Two more rules: keeping a saved full-length copy is worth at least a 3, and at the
 90-day mark a longer article that is still sitting in Later or Feed and was opened
 but not finished gets a 2.
+
+### Voting with 👍 and 👎
+
+Add the tag **👍** or **👎** to a pick (or to your saved copy of it). Both are
+strong signals, and neither counts as "a tag of your own".
+
+- **👍** grades the article 5, counts double in the learning, and counts from the
+  day you add it (other articles wait a month, until "left alone" is known). Each 👍
+  also gives its topic, site, type of article and angle a direct boost from the next
+  daily pick, fading by half each month like everything else.
+- **👎** counts only with a reason. Write it in the article's **document note**
+  ("An event announcement, not an article"). The scoring AI reads your noted 👎s
+  (and noted 👍s) at every daily pick, as rules from you for similar articles. A 👎
+  without a note changes nothing: the program never guesses why. The 👎 itself
+  never lowers the site or topic, since your reason is usually about something
+  narrower; the article is still graded by what you did with it, as usual.
+
+A vote or note is picked up at the next day's picks at the latest (the first run of
+each day re-reads every pick).
 
 A few consequences worth knowing:
 
@@ -274,9 +306,11 @@ to stop just the hourly job. `./reload-launchers.sh` turns it back on.
    picked at random from ranks 26 to 60.
 4. **Tagging.** `newsdigest` is added to those 28 in Reader, keeping any tags they
    already had.
-5. **Learning.** Every hour the grades above are updated. After about five weeks
-   there is enough history to nudge future scores by topic, site, form and angle,
-   always measured against the average so everything can't sink together.
+5. **Learning.** Every hour the grades above are updated, and they nudge future
+   scores by topic, site, form and angle, always measured against the average so
+   everything can't sink together. An article counts once it is a month old (a 👍
+   at once); your Readwise profile sets the starting scores, so there is no minimum
+   to reach first.
 
 If you prefer a different taste, the scoring prompt is in `scoring.py`, and the
 sizes and thresholds are in the [tuning table](#tuning-constants) below. Everything
@@ -373,7 +407,9 @@ These are plain constants in the code if you want to change the behaviour.
 | "Read" means at least | 50% | `grading.py` (`READ_FRACTION`) |
 | Unopened in Later before a 2 / in Feed before a 1.5 | 21 / 30 days | `grading.py` |
 | Tracking stops | 90 days after tagging | `grading.py` (`FREEZE_DAYS`) |
-| Learning: items counted / half-life / gate | 30–120 days old / 30 days / 50 items | `learning.py` |
+| Learning: items counted / half-life | 30–120 days old (👍: 0–120) / 30 days | `learning.py` |
+| 👍: weight / direct boost per fresh 👍 | 2× / 0.3 per dimension | `learning.py` (`THUMBS_UP_WEIGHT`, `THUMBS_UP_BOOST`) |
+| Noted 👍/👎 shown to the scorer | newest 30 | `scoring.py` (`FEEDBACK_LIMIT`) |
 | The digest folder in Reader | `News Digest feeds` | `feeds_membership.py` (`DIGEST_FOLDER`) |
 | Suggestions: look-back / saves a site needs / sites per report | 180 days / 3 / 5 | `suggest.py` |
 | Suggestions come every | 55 days (carried by a monthly report) | `suggest.py` |

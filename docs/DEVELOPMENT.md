@@ -33,6 +33,7 @@ changing the code.
 | `report.py` | the monthly and annual reading reports: what was read (the whole library), top sources, topic and region split, digest results |
 | `suggest.py`, `feed_discovery.py` | the feed suggestions (from the user's saved articles only), shown in every other monthly report; finding and checking a site's feed |
 | `check_setup.py` | the "is everything in place?" check |
+| `health.py` | the checks for problems that raise no error (a job that stopped, no picks, frozen grades, empty learning), read from `run.log` |
 | `common.py` | paths, Keychain, dates, Anthropic call, notifications |
 | `launchd/*.plist.template`, `install.sh`, `build-launchers.sh`, `newsdigest-launcher.c` | the background jobs |
 
@@ -84,6 +85,14 @@ defaults are neutral.
   progress is only previewed. The annual report waits for December's.
 - **Personal choices live in `prefs.json`, never in the code.** The checked-in
   defaults (source tiers, report topics and regions) are deliberately generic.
+- **Every silent failure needs a check in `health.py`.** The old app lost five
+  months of clicks because a failed write was swallowed and nothing noticed.
+  Errors notify; anything that can stop without an error (a job, a signal, a
+  feed) gets a health check. Both jobs write a line to `run.log` on every run
+  (`tagged=...` hourly, `daily ok|problem=...` daily) and read the other's.
+- **👍/👎 are votes, not tags of your own** (`grading.VOTE_TAGS`). 👎 counts only
+  through its document note, which reaches the scorer's prompt; it never feeds the
+  numeric learning. Notes live in each snapshot (`notes`).
 - **Branch flow:** work lands on an integration branch after it has been checked by
   hand; the default branch gets a merge only when a feature is complete.
 

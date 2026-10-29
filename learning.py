@@ -12,23 +12,35 @@ How it works here:
 * an item counts only once it is 30 to 120 days old and currently has a grade.
   "Left alone" verdicts only arrive at day 30 while positives arrive within
   days; counting positives early would make recent data look mostly positive;
+* a 👍 is a verdict you gave, so it counts from the day you tag it and
+  weighs THUMBS_UP_WEIGHT times an ordinary item of 30 days (the heaviest an
+  ordinary counted item gets);
 * items are decayed by their tagged date with a true 30-day half-life;
-* below GATE decayed counted items, no nudges: pure Haiku scores.
+* each 👍 also gives its topic, site, form and angle a direct boost of
+  THUMBS_UP_BOOST (decayed like everything else), added on top of the
+  comparison so a 👍 moves scores from the next pick, before any ordinary
+  item is old enough to compare against;
+* there is no minimum number of items: your Readwise profile already sets
+  every starting score, and the smoothing (K) keeps nudges from a few items
+  small. Nudges are comparisons, so 👍 items alone (all equally liked) move
+  nothing until ordinary items reach 30 days.
 """
 
 from collections import Counter
 from datetime import datetime, timezone
 
 from common import atomic_write, days_between
+from grading import voted_up
 
 MIN_AGE_DAYS = 30
 MAX_AGE_DAYS = 120
 HALF_LIFE_DAYS = 30
-GATE = 50.0             # decayed counted items needed before any nudge
 K = 30.0                # smoothing: pseudo-impressions pulling thin values to the mean
 C = 0.1                 # fixed floor in the denominator; never use max(m, eps)
 SCALE = 1.0
 MAX_NUDGE = 2.0         # hard clamp on |delta| out of a 1-10 score axis
+THUMBS_UP_WEIGHT = 2.0  # a 👍 counts this many times an ordinary item
+THUMBS_UP_BOOST = 0.3   # direct nudge per fresh 👍, per dimension
 
 # Dimension name -> the tracked-entry field carrying its value.
 DIMENSIONS = {
@@ -45,20 +57,24 @@ def _empty(now):
 
 
 def counted_items(tracked, today):
-    """[(entry, decay weight)] for graded items that are 30-120 days old."""
+    """[(entry, decay weight)] for graded items that are 30-120 days old, and
+    for 👍 items up to 120 days old."""
     counted = []
     for entry in tracked.values():
         if entry.get("grade") is None:
             continue
         age = days_between(entry["tagged_date"], today)
-        if MIN_AGE_DAYS <= age <= MAX_AGE_DAYS:
+        if voted_up(entry) and age <= MAX_AGE_DAYS:
+            decay = 0.5 ** (max(age, MIN_AGE_DAYS) / HALF_LIFE_DAYS)
+            counted.append((entry, THUMBS_UP_WEIGHT * decay))
+        elif MIN_AGE_DAYS <= age <= MAX_AGE_DAYS:
             counted.append((entry, 0.5 ** (age / HALF_LIFE_DAYS)))
     return counted
 
 
 def decayed_total(tracked, today):
-    """Decayed counted items that carry at least one dimension: the number the
-    gate looks at."""
+    """Decayed counted items that carry at least one dimension: how much the
+    learning has to go on."""
     return sum(decay for entry, decay in counted_items(tracked, today)
                if any(entry.get(field) for field in DIMENSIONS.values()))
 
@@ -71,8 +87,6 @@ def compute_learned_weights(tracked, today, now=None):
                 if any(entry.get(f) for f in DIMENSIONS.values()))
     weights["counted"] = len(counted)
     weights["decayed_total"] = round(total, 2)
-    if total < GATE:
-        return weights
 
     impressions = {dim: Counter() for dim in DIMENSIONS}
     positives = {dim: Counter() for dim in DIMENSIONS}
@@ -84,15 +98,25 @@ def compute_learned_weights(tracked, today, now=None):
                 impressions[dim][value] += decay
                 positives[dim][value] += decay * positive
 
+    boosts = {dim: Counter() for dim in DIMENSIONS}
+    for entry in tracked.values():
+        age = days_between(entry["tagged_date"], today)
+        if voted_up(entry) and age <= MAX_AGE_DAYS:
+            for dim, field in DIMENSIONS.items():
+                if entry.get(field):
+                    boosts[dim][entry[field]] += (
+                        THUMBS_UP_BOOST * 0.5 ** (age / HALF_LIFE_DAYS))
+
     for dim in DIMENSIONS:
         total_imp = sum(impressions[dim].values())
         total_pos = sum(positives[dim].values())
-        # The global gate does not protect an individually empty dimension
-        # (say, every article had a blank frame).
+        # An individually empty dimension (say, every article had a blank
+        # frame) has no mean.
         mean = (total_pos / total_imp) if total_imp > 0 else 0.0
-        for value, imp in impressions[dim].items():
+        for value in set(impressions[dim]) | set(boosts[dim]):
+            imp = impressions[dim][value]
             rate = (positives[dim][value] + K * mean) / (imp + K)
-            delta = SCALE * (rate - mean) / (mean + C)
+            delta = SCALE * (rate - mean) / (mean + C) + boosts[dim][value]
             delta = max(-MAX_NUDGE, min(MAX_NUDGE, delta))
             if abs(delta) > 1e-9:
                 weights[dim][value] = delta

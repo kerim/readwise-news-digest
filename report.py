@@ -32,6 +32,7 @@ from html import escape
 
 import copies
 import feeds_membership
+import health
 import suggest
 from common import (
     APIAuthError,
@@ -643,6 +644,8 @@ def run_monthly(paths, client, today, now, weekly, api_key=get_api_key,
                                           dry_run=dry_run, say=say)
     sections = monthly_sections(target, stats, previous, through if preview else None,
                                 suggestions or None)
+    sections.append({"heading": "", "notes": [
+        health.month_summary(health.read_log(paths.run_log), target)]})
     title = f"News Digest Monthly Report — {month_name(target)}"
     html = render_html(sections)
     if html_path:

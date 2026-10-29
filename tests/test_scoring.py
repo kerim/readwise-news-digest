@@ -239,3 +239,40 @@ class AdjustmentTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+def voted(title, mark, note, tagged="2026-10-20", copy=False, host="n.example"):
+    snap = {"tags": ["newsdigest", mark] if mark else ["newsdigest"],
+            "notes": note}
+    e = {"id": title, "title": title, "host": host, "tagged_date": tagged,
+         "snapshot": {"tags": ["newsdigest"], "notes": ""} if copy else snap}
+    if copy:
+        e["copy_snapshot"] = snap
+    return e
+
+
+class FeedbackTests(unittest.TestCase):
+    def test_only_votes_with_a_note_are_sent(self):
+        tracked = {e["id"]: e for e in (
+            voted("A", "👎", "Event notice, not an article."),
+            voted("B", "👎", ""),
+            voted("C", "👍", "   "),
+            voted("D", None, "a note without a vote"),
+            voted("E", "👍", "More on-the-ground reporting.", copy=True))}
+        rows = scoring.reader_feedback(tracked)
+        self.assertEqual(sorted(r[1] for r in rows), ["A", "E"])
+
+    def test_newest_first_and_limited(self):
+        tracked = {str(i): voted(str(i), "👎", "why", tagged=f"2026-10-{i + 10:02d}")
+                   for i in range(5)}
+        rows = scoring.reader_feedback(tracked, limit=2)
+        self.assertEqual([r[1] for r in rows], ["4", "3"])
+
+    def test_the_section_quotes_each_note(self):
+        text = scoring.build_feedback_context(
+            [("👎", "How We Can Build", "nplusonemag.com", "Event notice.")])
+        self.assertIn("The Reader's Own Verdicts", text)
+        self.assertIn("- 👎 “How We Can Build” (nplusonemag.com): Event notice.", text)
+
+    def test_no_votes_no_section(self):
+        self.assertEqual(scoring.build_feedback_context([]), "")

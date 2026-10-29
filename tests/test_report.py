@@ -314,6 +314,15 @@ class MonthlyRunTests(RunCase):
         self.assertFalse(self.paths.weekly.exists())
         self.assertIn("News Digest Monthly Report — October 2026", "\n".join(self.said))
 
+    def test_the_report_says_how_the_program_ran(self):
+        self.paths.run_log.write_text(
+            "2026-10-05 07:07 tagged=28 scored=1 graded=0 learned=0.0\n"
+            "2026-10-06 03:00 daily problem=profile\n")
+        self.monthly(dry_run=True)
+        said = "\n".join(self.said)
+        self.assertIn("the hourly job ran on 1 day and the daily job on 1 day", said)
+        self.assertIn("Problems reported: profile.", said)
+
     def test_html_can_be_drawn_to_a_file(self):
         target = Path(self._tmp.name) / "r.html"
         self.monthly(dry_run=True, html_path=str(target))

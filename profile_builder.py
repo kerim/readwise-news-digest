@@ -34,6 +34,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import urlparse
 
+import health
 import report
 from common import (
     QMD_COLLECTION,
@@ -409,13 +410,20 @@ def main(argv=None):
     paths = Paths()
     setup_logging(paths)
     today = local_today()
-    problems = 0
+    problems = []           # short names, written to run.log for the report
     try:
         weekly = load_weekly(paths)
     except Exception as exc:
         log.error(f"Cannot read weekly.json: {exc}")
         notify("Readwise News Digest", f"Cannot read the weekly notes file: {exc}")
         return 1
+
+    stopped = health.hourly_job_stopped(health.read_log(paths.run_log))
+    if stopped:
+        problems.append(stopped[0])
+        log.warning(f"{stopped[0]}: {stopped[1]}")
+        print(f"Problem: {stopped[1]}", file=sys.stderr)
+        notify("Readwise News Digest", stopped[1])
 
     vault = configured_vault(paths)
     if vault is None:
@@ -426,7 +434,7 @@ def main(argv=None):
             rebuild_profile(paths, weekly, today, vault, topic_prefix(paths))
             print("Profile build complete.")
         except Exception as exc:
-            problems += 1
+            problems.append("profile")
             log.error(f"Profile build failed: {exc}", exc_info=True)
             print(f"Problem: profile build failed: {exc}", file=sys.stderr)
             notify("Readwise News Digest", f"The weekly profile build failed: {exc}")
@@ -434,16 +442,20 @@ def main(argv=None):
         print(f"Profile is up to date (built {weekly['last_profile_date']}).")
 
     now = datetime.now(timezone.utc)
-    jobs = (("The monthly report", report.run_monthly, (today, now)),
-            ("The annual report", report.run_annual, (today,)))
-    for name, job, args in jobs:
+    jobs = (("The monthly report", "monthly-report", report.run_monthly, (today, now)),
+            ("The annual report", "annual-report", report.run_annual, (today,)))
+    for name, key, job, args in jobs:
         try:
             job(paths, ReaderClient(get_readwise_token()), *args, weekly)
         except Exception as exc:
-            problems += 1
+            problems.append(key)
             log.error(f"{name} failed: {exc}", exc_info=True)
             print(f"Problem: {name.lower()} failed: {exc}", file=sys.stderr)
             notify("Readwise News Digest", f"{name} failed: {exc}")
+    # The hourly job reads this line to know the daily job is alive.
+    with open(paths.run_log, "a") as f:
+        f.write(f"{datetime.now():%Y-%m-%d %H:%M} daily "
+                + (f"problem={','.join(problems)}" if problems else "ok") + "\n")
     return 1 if problems else 0
 
 

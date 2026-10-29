@@ -22,12 +22,14 @@ from common import (
     local_date_days_ago,
 )
 from feeds_membership import host_of
+from grading import THUMBS_UP, vote
 
 log = logging.getLogger("rnd")
 
 BATCH_SIZE = 50
 BATCH_INTER_DELAY = 1       # seconds between LLM batch calls
 SUMMARY_MAX_CHARS = 500
+FEEDBACK_LIMIT = 30         # newest voted-and-noted items shown to the scorer
 EXCLUDED_URL_HINTS = {"video", "podcast"}   # this is a reading digest
 JUNK_FLOOR = 3              # min(RAW topic, RAW form) below this is garbage;
                             # applied before nudges so learning can neither
@@ -158,6 +160,44 @@ def recent_frames(tracked, days=30, top_n=15):
     counts = Counter(entry["frame"] for entry in tracked.values()
                      if entry.get("frame") and entry.get("tagged_date", "") >= cutoff)
     return counts.most_common(top_n)
+
+
+def reader_feedback(tracked, limit=FEEDBACK_LIMIT):
+    """[(vote, title, site, note)] for items you gave a 👍 or 👎 *and* a
+    document note, newest first. A vote without a note says nothing about why,
+    so it is left out: the scorer is never asked to guess."""
+    rows = []
+    for entry in tracked.values():
+        for key in ("snapshot", "copy_snapshot"):
+            snap = entry.get(key)
+            note = " ".join(((snap or {}).get("notes") or "").split())
+            if vote(snap) and note:
+                rows.append((entry.get("tagged_date", ""), vote(snap),
+                             entry.get("title") or "Untitled",
+                             entry.get("host") or "", note))
+                break
+    rows.sort(key=lambda row: row[0], reverse=True)
+    return [row[1:] for row in rows[:limit]]
+
+
+def build_feedback_context(feedback):
+    """The reader's own verdicts as a prompt section ("" when there are none)."""
+    if not feedback:
+        return ""
+    lines = [
+        "## The Reader's Own Verdicts\n",
+        f"The reader marked these past items {THUMBS_UP} (more like this) or 👎 "
+        "(not this) and wrote why. Each reason is a firm rule from the reader "
+        "for similar items. When a 👎 reason is about the kind of item (for "
+        "example an event announcement rather than an article), score that "
+        "kind of item low on form_score even when its topic is a strong "
+        "match. When a 👍 reason names what was good, score similar items "
+        "higher.",
+    ]
+    for mark, title, site, note in feedback:
+        where = f" ({site})" if site else ""
+        lines.append(f"- {mark} “{title}”{where}: {note}")
+    return "\n".join(lines)
 
 
 # --- Prompt ----------------------------------------------------------------

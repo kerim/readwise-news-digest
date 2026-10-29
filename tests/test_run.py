@@ -296,7 +296,8 @@ class FailureTests(RunTestCase):
         self.go()
         self.now = NOW + timedelta(days=1)
         self.go()
-        self.assertEqual(len(self.notices), 2)
+        about_it = [m for _, m in self.notices if "No articles" not in m]
+        self.assertEqual(len(about_it), 2)
 
     def test_a_rejected_readwise_token_is_reported(self):
         def boom():
@@ -424,3 +425,43 @@ class LockTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class VoteNoteTests(RunTestCase):
+    def prompts(self):
+        seen = []
+        inner = self.deps.score_call
+
+        def record(api_key, messages, system=None, max_tokens=0):
+            seen.append(messages[0]["content"])
+            return inner(api_key, messages, system=system, max_tokens=max_tokens)
+        self.deps.score_call = record
+        return seen
+
+    def vote_next_day(self, mark, note):
+        self.go()
+        doc = self.reader.docs["doc29"]
+        doc["tags"] = {"newsdigest": {"name": "newsdigest", "type": "public_api"},
+                       mark: {"name": mark, "type": "manual"}}
+        doc["notes"] = note
+        self.set_time(NOW + timedelta(days=1))
+        doc["updated_at"] = self.now.isoformat()
+        fresh = (self.now - timedelta(hours=1)).isoformat()
+        self.reader.docs["doc99"] = make_doc(99, created_at=fresh, updated_at=fresh)
+        seen = self.prompts()
+        self.go()
+        return "\n".join(seen)
+
+    def test_a_noted_thumbs_down_reaches_the_next_days_scoring(self):
+        prompt = self.vote_next_day("👎", "An event announcement, not an article.")
+        self.assertIn("The Reader's Own Verdicts", prompt)
+        self.assertIn("👎", prompt)
+        self.assertIn("An event announcement, not an article.", prompt)
+
+    def test_a_thumbs_down_without_a_note_is_not_sent(self):
+        prompt = self.vote_next_day("👎", "")
+        self.assertNotIn("The Reader's Own Verdicts", prompt)
+
+    def test_a_thumbs_down_is_not_graded_as_a_tag_of_yours(self):
+        self.vote_next_day("👎", "")
+        self.assertNotEqual(self.tracked()["doc29"]["grade"], 5)

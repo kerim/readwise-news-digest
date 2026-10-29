@@ -63,6 +63,20 @@ class FiveTests(unittest.TestCase):
         self.assertEqual(g, 5)
         self.assertIn("To Share", reason)
 
+    def test_a_thumbs_up_is_five(self):
+        self.assertEqual(grade(tags=["newsdigest", "👍"]),
+                         (5, "you gave it 👍"))
+
+    def test_a_thumbs_down_is_not_a_tag_of_your_own(self):
+        # archived unopened: the ordinary rule decides, not the 👎
+        self.assertEqual(grade(tags=["newsdigest", "👎"], location="archive")[0], 1)
+        self.assertIsNone(grade(tags=["newsdigest", "👎"])[0])
+
+    def test_voted_up_looks_at_the_item_and_the_copy(self):
+        self.assertTrue(grading.voted_up(entry(snapshot=snap(tags=["👍"]))))
+        self.assertTrue(grading.voted_up(entry(copy=snap(tags=["👍"]))))
+        self.assertFalse(grading.voted_up(entry(snapshot=snap(tags=["👎"]))))
+
     def test_our_own_tags_never_count_whatever_their_case(self):
         self.assertIsNone(grade(tags=["newsdigest", "NewsDigest-Copy",
                                       "newsdigest-suggestions"])[0])

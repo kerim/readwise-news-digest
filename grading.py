@@ -8,7 +8,7 @@ deleted), which are never undone.
 
 Rows are checked top to bottom and the first match wins:
 
-    5    ever highlighted, or carries a tag of your own
+    5    you gave it 👍, ever highlighted, or carries a tag of your own
     4    long article (>= 1,500 words) read >= 50%, in any location
     3    ever shortlisted; or medium article (500-1,499 words) read >= 50%
     2    long/medium article opened, read < 50%, then archived;
@@ -18,6 +18,9 @@ Rows are checked top to bottom and the first match wins:
     1.5  in Feed, unopened, 30+ days after tagging
     1    archived without being opened
     none anything else
+
+👍 and 👎 are votes, not tags of your own: 👎 never raises a grade (the
+reason you write in its note is what counts, see scoring.reader_feedback).
 
 A saved full-length copy makes the pair worth at least 3, or more if the copy
 itself earns more.
@@ -36,6 +39,10 @@ COPY_FLOOR = 3               # keeping a full copy is worth at least this
 # The script's own tags never count as yours.
 OWN_TAGS = frozenset({"newsdigest", "newsdigest-copy", "newsdigest-suggestions"})
 
+THUMBS_UP = "👍"
+THUMBS_DOWN = "👎"
+VOTE_TAGS = frozenset({THUMBS_UP, THUMBS_DOWN})
+
 
 def word_class(word_count):
     """'long', 'medium', 'short' or 'unknown' (no word count)."""
@@ -53,7 +60,22 @@ def user_tags(snap):
     or Ghostreader (type 'auto')."""
     auto = {t.lower() for t in snap.get("auto_tags") or []}
     return [t for t in snap.get("tags") or []
-            if t.lower() not in OWN_TAGS and t.lower() not in auto]
+            if t.lower() not in OWN_TAGS and t.lower() not in auto
+            and t not in VOTE_TAGS]
+
+
+def vote(snap):
+    """THUMBS_UP, THUMBS_DOWN or None for one snapshot (👍 wins if both)."""
+    tags = (snap or {}).get("tags") or []
+    if THUMBS_UP in tags:
+        return THUMBS_UP
+    return THUMBS_DOWN if THUMBS_DOWN in tags else None
+
+
+def voted_up(entry):
+    """True when you gave the feed item or its saved copy a 👍."""
+    return any(vote(entry.get(k)) == THUMBS_UP
+               for k in ("snapshot", "copy_snapshot"))
 
 
 def _days_since(iso_or_none, today, fallback_date):
@@ -77,6 +99,8 @@ def grade_document(snap, tagged_date, today, as_archived=False, freezing=False):
     cls = word_class(words)
     opened = bool(snap.get("first_opened_at"))
 
+    if vote(snap) == THUMBS_UP:
+        return 5, f"you gave it {THUMBS_UP}"
     if snap.get("highlighted"):
         return 5, "you highlighted it"
     mine = user_tags(snap)

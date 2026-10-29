@@ -54,22 +54,75 @@ class CountingTests(unittest.TestCase):
             tracked_of(entry(1, 50, None)), TODAY), [])
 
 
-class GateTests(unittest.TestCase):
-    def test_below_the_gate_there_are_no_nudges(self):
-        weights = learning.compute_learned_weights(population(60), TODAY)  # 30 decayed
-        self.assertEqual(weights["topics"], {})
-        self.assertEqual(weights["sources"], {})
-        self.assertAlmostEqual(weights["decayed_total"], 30.0)
-        self.assertEqual(weights["counted"], 60)
+class NoMinimumTests(unittest.TestCase):
+    def test_a_few_items_already_nudge_but_only_a_little(self):
+        weights = learning.compute_learned_weights(population(10), TODAY)
+        self.assertGreater(weights["topics"]["A"], 0)
+        self.assertLess(weights["topics"]["B"], 0)
+        many = learning.compute_learned_weights(population(200), TODAY)
+        self.assertLess(weights["topics"]["A"], many["topics"]["A"])
 
-    def test_at_the_gate_nudges_appear(self):
-        weights = learning.compute_learned_weights(population(100), TODAY)  # 50
-        self.assertTrue(weights["topics"])
-
-    def test_the_gate_is_on_decayed_items_so_older_ones_count_less(self):
-        weights = learning.compute_learned_weights(population(100, age=60), TODAY)
-        self.assertAlmostEqual(weights["decayed_total"], 25.0)
+    def test_nothing_counted_means_no_nudges(self):
+        weights = learning.compute_learned_weights({}, TODAY)
         self.assertEqual(weights["topics"], {})
+        self.assertEqual(weights["decayed_total"], 0)
+
+
+def thumbs_up(e):
+    e["snapshot"] = {"tags": ["newsdigest", "👍"]}
+    return e
+
+
+class ThumbsUpTests(unittest.TestCase):
+    def test_a_thumbs_up_counts_from_the_day_it_is_tagged(self):
+        tracked = tracked_of(thumbs_up(entry(1, 0, 5)), entry(2, 0, 5))
+        ids = {e["id"] for e, _ in learning.counted_items(tracked, TODAY)}
+        self.assertEqual(ids, {"e1"})
+
+    def test_a_thumbs_up_weighs_double_a_30_day_item(self):
+        tracked = tracked_of(thumbs_up(entry(1, 3, 5)), thumbs_up(entry(2, 60, 5)))
+        weights = {e["id"]: w for e, w in learning.counted_items(tracked, TODAY)}
+        self.assertAlmostEqual(weights["e1"], 1.0)    # 2 x 0.5
+        self.assertAlmostEqual(weights["e2"], 0.5)    # 2 x 0.25
+
+    def test_a_thumbs_up_on_the_saved_copy_counts_too(self):
+        e = entry(1, 3, 5)
+        e["snapshot"] = {"tags": ["newsdigest"]}
+        e["copy_snapshot"] = {"tags": ["newsdigest-copy", "👍"]}
+        self.assertEqual(len(learning.counted_items(tracked_of(e), TODAY)), 1)
+
+    def test_a_thumbs_up_lifts_its_values_against_ordinary_items(self):
+        tracked = population(40)
+        tracked.update(tracked_of(*[
+            thumbs_up(entry(100 + i, 2, 5, topic="C", host="c.com"))
+            for i in range(3)]))
+        weights = learning.compute_learned_weights(tracked, TODAY)
+        self.assertGreater(weights["topics"]["C"], 0)
+
+    def test_one_fresh_thumbs_up_boosts_at_once_with_nothing_to_compare(self):
+        tracked = tracked_of(thumbs_up(entry(1, 0, 5, topic="C", host="c.com")))
+        weights = learning.compute_learned_weights(tracked, TODAY)
+        for dim, value in (("topics", "C"), ("sources", "c.com"),
+                           ("forms", "essay"), ("frames", "f")):
+            self.assertAlmostEqual(weights[dim][value], learning.THUMBS_UP_BOOST)
+
+    def test_the_boost_halves_in_30_days_and_adds_up(self):
+        tracked = tracked_of(thumbs_up(entry(1, 30, 5, topic="C")),
+                             thumbs_up(entry(2, 0, 5, topic="C")))
+        weights = learning.compute_learned_weights(tracked, TODAY)
+        self.assertAlmostEqual(weights["topics"]["C"],
+                               1.5 * learning.THUMBS_UP_BOOST)
+
+    def test_the_boost_stays_inside_the_clamp(self):
+        tracked = tracked_of(*[thumbs_up(entry(i, 0, 5, topic="C"))
+                               for i in range(20)])
+        weights = learning.compute_learned_weights(tracked, TODAY)
+        self.assertEqual(weights["topics"]["C"], learning.MAX_NUDGE)
+
+    def test_no_boost_after_120_days(self):
+        tracked = tracked_of(thumbs_up(entry(1, 121, 5, topic="C")))
+        self.assertEqual(
+            learning.compute_learned_weights(tracked, TODAY)["topics"], {})
 
 
 class NudgeTests(unittest.TestCase):

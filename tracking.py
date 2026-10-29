@@ -65,6 +65,7 @@ def make_snapshot(doc, tags=None):
         "last_moved_at": doc.get("last_moved_at"),
         "tags": tags if tags is not None else tag_names(doc),
         "auto_tags": auto_tag_names(doc),
+        "notes": doc.get("notes") or "",
         "highlighted": False,
         "shortlisted": doc.get("location") == "shortlist",
     }
